@@ -13,11 +13,38 @@ android {
         applicationId = "com.colvyra.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.4.3-m4d"
+        versionCode = 11
+        versionName = "0.5.0-m5a"
     }
 
-    buildTypes { release { isMinifyEnabled = false } }
+    // Release signing is opt-in and never embeds credentials in the repository.
+    // Android's signing identity remains stable only if the same key is reused.
+    val releaseStorePath = providers.environmentVariable("COLVYRA_KEYSTORE_PATH").orNull
+    val releaseStorePassword = providers.environmentVariable("COLVYRA_KEYSTORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("COLVYRA_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("COLVYRA_KEY_PASSWORD").orNull
+    val releaseSigningConfigured = listOf(
+        releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+    ).all { !it.isNullOrBlank() }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("colvyraRelease") {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("colvyraRelease")
+            }
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

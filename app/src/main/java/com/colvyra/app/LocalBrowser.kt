@@ -124,13 +124,7 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
     var delete by remember { mutableStateOf<Entry?>(null) }
     var newFolder by remember { mutableStateOf(false) }
     var transfer by remember { mutableStateOf<Transfer?>(null) }
-    val loader = remember(context) {
-        ImageLoader.Builder(context.applicationContext).components {
-            add(VideoFrameDecoder.Factory())
-            if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
-        }.build()
-    }
-    DisposableEffect(loader) { onDispose { loader.shutdown() } }
+    val loader = remember(context) { LocalMediaImageLoader.get(context) }
 
     fun work(action: () -> String) {
         if (busy) return

@@ -30,6 +30,70 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: colvyra-m4d-debug-apk
+          name: colvyra-m5a-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  signed-release:
+    # Never expose signing secrets to pull-request code or forks.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check whether signing is configured
+        id: signing
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.COLVYRA_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.COLVYRA_KEYSTORE_PASSWORD }}
+          RELEASE_ALIAS: ${{ secrets.COLVYRA_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.COLVYRA_KEY_PASSWORD }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE_B64" ] && [ -n "$RELEASE_STORE_PASSWORD" ] && [ -n "$RELEASE_ALIAS" ] && [ -n "$RELEASE_KEY_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No complete signing secret set; signed release skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.signing.outputs.enabled == 'true'
+      - uses: actions/setup-java@v4
+        if: steps.signing.outputs.enabled == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.signing.outputs.enabled == 'true'
+        with:
+          gradle-version: '8.13'
+      - name: Install Android SDK 36
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+      - name: Assemble signed release APK
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          COLVYRA_KEYSTORE_BASE64: ${{ secrets.COLVYRA_KEYSTORE_BASE64 }}
+          COLVYRA_KEYSTORE_PASSWORD: ${{ secrets.COLVYRA_KEYSTORE_PASSWORD }}
+          COLVYRA_KEY_ALIAS: ${{ secrets.COLVYRA_KEY_ALIAS }}
+          COLVYRA_KEY_PASSWORD: ${{ secrets.COLVYRA_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          export COLVYRA_KEYSTORE_PATH="$RUNNER_TEMP/colvyra-release.jks"
+          printf '%s' "$COLVYRA_KEYSTORE_BASE64" | base64 --decode > "$COLVYRA_KEYSTORE_PATH"
+          chmod 600 "$COLVYRA_KEYSTORE_PATH"
+          gradle --no-daemon :app:assembleRelease
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+          sha256sum app/build/outputs/apk/release/app-release.apk > app/build/outputs/apk/release/SHA256SUMS.txt
+      - name: Upload signed APK and checksum
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: colvyra-m5a-signed-release-apk
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Destroy temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/colvyra-release.jks"

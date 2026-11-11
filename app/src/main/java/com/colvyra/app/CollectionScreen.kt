@@ -107,13 +107,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
     var removeEntry by remember { mutableStateOf<CollectionEntry?>(null) }
     var viewer by remember { mutableStateOf<Entry?>(null) }
     var busy by remember { mutableStateOf(false) }
-    val loader = remember(context) {
-        ImageLoader.Builder(context.applicationContext).components {
-            add(VideoFrameDecoder.Factory())
-            if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
-        }.build()
-    }
-    DisposableEffect(loader) { onDispose { loader.shutdown() } }
+    val loader = remember(context) { LocalMediaImageLoader.get(context) }
     BackHandler(enabled = selectedId != null) { selectedId = null }
     fun work(action: suspend () -> Unit) {
         if (busy) return
