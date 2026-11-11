@@ -201,7 +201,7 @@ private fun ColvyraApp() {
                             supportingContent = { Text(if (folders.isEmpty()) "Выбрать папку" else "Подключена") },
                             leadingContent = { Icon(Icons.Outlined.Folder, null) },
                             modifier = Modifier.clickable { picker.launch(null) })
-                        Text("Mail.ru Cloud, WebDAV, Google Drive, Photos и соцсети — в дорожной карте.")
+                        CloudScreen()
                     }
                     Screen.WEBSITES -> {
                         Text("Сайты", style = MaterialTheme.typography.titleLarge)

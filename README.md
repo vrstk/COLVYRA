@@ -4,7 +4,7 @@
 
 COLVYRA is a planned open-source Android file manager and media gallery with virtual collections. It is meant for any kind of collection, not just a particular subject.
 
-## Status: M2 virtual collections (development)
+## Status: M3a WebDAV (development)
 
 The initial version contains:
 - five main tabs (Files, Gallery, Collections, Sources, Websites);
@@ -21,7 +21,7 @@ Not yet implemented: cross-device backup, cloud references, automatic repair of 
 
 ## Build the debug APK
 
-GitHub Actions builds automatically on each push to `main`. Open **Actions → Android CI → latest successful run → Artifacts → colvyra-m2-debug-apk**.
+GitHub Actions builds automatically on each push to `main`. Open **Actions → Android CI → latest successful run → Artifacts → colvyra-m3a-debug-apk**.
 
 The workflow uses Java 17, Android SDK 36 and Gradle 8.13. The Gradle wrapper is not yet included; for local builds, install Gradle 8.13 (or generate and commit a matching wrapper). The project has not been verified on real devices yet.
 
@@ -35,3 +35,6 @@ No account is required for local functionality. No user media or API secrets are
 - [Roadmap](docs/ROADMAP.md)
 
 Licensed under Apache-2.0.
+
+
+M3a adds one saved HTTPS WebDAV account, encrypted credentials, folder listing, MKCOL, upload and download. Real provider testing, multiple accounts, cloud media previews, remote references and transfer queue are pending.
