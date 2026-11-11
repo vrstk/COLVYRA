@@ -164,20 +164,28 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
         catch (e: CancellationException) { throw e }
         catch (e: Exception) { data = null; failure = e.localizedMessage ?: "Нет доступа к папке" }
     }
-    val visible = remember(data, mediaOnly, query, order, reverse, typeFilter) {
-        localVisibleEntries(
-            entries = data?.entries.orEmpty(),
-            query = query,
-            galleryOnly = mediaOnly,
-            typeFilter = typeFilter,
-            sort = order,
-            reverse = reverse,
-            name = { it.name },
-            mime = { it.mime },
-            folder = { it.folder },
-            modified = { it.modified },
-            size = { it.size }
-        )
+    // Filtering and sorting can be expensive in folders with thousands of files.
+    // produceState cancels obsolete work when the folder, search or sort changes.
+    val visible by produceState(
+        initialValue = emptyList<Entry>(),
+        data, mediaOnly, query, order, reverse, typeFilter
+    ) {
+        val snapshot = data?.entries.orEmpty()
+        value = withContext(Dispatchers.Default) {
+            localVisibleEntries(
+                entries = snapshot,
+                query = query,
+                galleryOnly = mediaOnly,
+                typeFilter = typeFilter,
+                sort = order,
+                reverse = reverse,
+                name = { it.name },
+                mime = { it.mime },
+                folder = { it.folder },
+                modified = { it.modified },
+                size = { it.size }
+            )
+        }
     }
     fun open(e: Entry) {
         if (e.folder) openDirectory(e.uri)
@@ -334,7 +342,7 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
     Box(modifier, contentAlignment = Alignment.Center) {
         if (e.media) {
             Icon(if (e.mime.startsWith("video/")) Icons.Outlined.Movie else Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.primary)
-            AsyncImage(model = e.uri, imageLoader = loader, contentDescription = e.name, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            AsyncImage(model = localThumbnailRequest(e.uri, 384), imageLoader = loader, contentDescription = e.name, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else Icon(if (e.folder) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(38.dp))
     }
 }

@@ -2,7 +2,7 @@
 
 Open-source Android file manager, gallery and virtual collections.
 
-## Current: M5E (development)
+## Current: M5F (development)
 
 - Local SAF browser, gallery, thumbnails and media viewer.
 - Room virtual collections, links, descriptions, tags and favorites.
@@ -13,7 +13,7 @@ Open-source Android file manager, gallery and virtual collections.
 
 ## Build
 
-Java 17, Gradle 8.13, Android SDK 36. Actions → latest successful Android CI → Artifacts → colvyra-m5e-debug-apk.
+Java 17, Gradle 8.13, Android SDK 36. Actions → latest successful Android CI → Artifacts → colvyra-m5f-debug-apk.
 
 ## Limits
 
@@ -34,3 +34,5 @@ M5C: Settings now displays installed version/build type, signing certificate SHA
 M5D: local gallery and file manager now support image/video filters, persistent ascending/descending sort settings and file metadata details. See docs/M5D.md. Device testing remains pending.
 
 M5E: local photo viewer pinch zoom, double-tap, 1–4× controls and reset with bounded panning. More regression tests. See docs/M5E.md. Touch/device QA is pending.
+
+M5F: local listing filtering and sorting moved off the main thread; previews use bounded-size decode requests and collection counts are precomputed. See docs/M5F.md. Physical-device performance testing remains pending.

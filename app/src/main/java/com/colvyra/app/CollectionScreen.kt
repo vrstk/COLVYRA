@@ -95,6 +95,8 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
     val scope = rememberCoroutineScope()
     val collections by dao.observeCollections().collectAsState(initial = emptyList())
     val entries by dao.observeEntries().collectAsState(initial = emptyList())
+    // Avoid recalculating a full collection scan for every card during scrolling.
+    val itemCounts = remember(entries) { entries.groupingBy { it.collectionId }.eachCount() }
     var selectedId by remember { mutableStateOf<String?>(null) }
     val selected = collections.find { it.id == selectedId }
     var query by remember(selectedId) { mutableStateOf("") }
@@ -179,7 +181,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
                 Card(onClick = { selectedId = c.id }) {
                     Box(Modifier.fillMaxWidth().aspectRatio(1.4f), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.CollectionsBookmark, null, Modifier.size(48.dp))
-                        c.coverUri?.takeUnless { isCloudReference(it) }?.let { AsyncImage(model = Uri.parse(it), imageLoader = loader, contentDescription = c.name,
+                        c.coverUri?.takeUnless { isCloudReference(it) }?.let { AsyncImage(model = localThumbnailRequest(Uri.parse(it), 512), imageLoader = loader, contentDescription = c.name,
                             modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
                     }
                     Column(Modifier.padding(10.dp)) {
@@ -187,7 +189,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
                             Text(c.name, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                             if (c.favorite) Icon(Icons.Outlined.Star, null, tint = MaterialTheme.colorScheme.primary)
                         }
-                        Text("${entries.count { it.collectionId == c.id }} материалов", style = MaterialTheme.typography.labelSmall)
+                        Text("${itemCounts[c.id] ?: 0} материалов", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -218,7 +220,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
                         Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                             Icon(if (e.mime == FOLDER) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile, null)
                             if (!isCloudReference(e.uri) && (e.mime.startsWith("image/") || e.mime.startsWith("video/")))
-                                AsyncImage(model = Uri.parse(e.uri), imageLoader = loader, contentDescription = null,
+                                AsyncImage(model = localThumbnailRequest(Uri.parse(e.uri), 192), imageLoader = loader, contentDescription = null,
                                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         }
                     },
