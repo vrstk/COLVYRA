@@ -159,7 +159,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit) {
                     else context.message("Для открытия папки добавьте её через выбор папки")
                 }
                 e.mime.startsWith("image/") || e.mime.startsWith("video/") -> viewer = Entry(uri, e.name, e.mime, 0, 0, 0)
-                else try {
+                else -> try {
                     context.startActivity(Intent(Intent.ACTION_VIEW).apply {
                         setDataAndType(uri, e.mime); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     })
