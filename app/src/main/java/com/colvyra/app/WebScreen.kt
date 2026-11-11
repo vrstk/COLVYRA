@@ -137,17 +137,10 @@ private fun downloadWeb(context:Context,job:WebDownload,dest:Uri,progress:(Long,
         val job=pending;pending=null
         val dest=result.data?.data
         if(result.resultCode==android.app.Activity.RESULT_OK && dest!=null && job!=null){
-            downloading=true;progress=0f;error=null
-            scope.launch{
-                try{
-                    withContext(Dispatchers.IO){downloadWeb(context,job,dest){done,total->
-                        if(total>0)progress=(done.toDouble()/total).toFloat().coerceIn(0f,1f)
-                    }}
-                    Toast.makeText(context,"Файл скачан",Toast.LENGTH_LONG).show()
-                }catch(e:CancellationException){throw e}
-                catch(e:Exception){error=(e.localizedMessage?:"Ошибка скачивания")+". Проверьте файл назначения: он может быть неполным."}
-                finally{downloading=false}
-            }
+            try {
+                enqueueDownload(context,LibraryReference(job.url,job.name,job.mime),dest,"Сайт",job.agent)
+                Toast.makeText(context,"Добавлено в загрузки",Toast.LENGTH_SHORT).show()
+            }catch(e:Exception){error=e.localizedMessage ?: "Не удалось добавить загрузку"}
         }
     }
     Row(verticalAlignment=Alignment.CenterVertically){

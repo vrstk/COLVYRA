@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.DarkMode
@@ -75,8 +76,10 @@ private enum class Screen(val title: String) {
 
 class MainActivity : ComponentActivity() {
     private var incomingLink by mutableStateOf<String?>(null)
+    private var incomingFiles by mutableStateOf<List<Uri>>(emptyList())
     private fun acceptShare(value: Intent?) {
-        if (value?.action == Intent.ACTION_SEND && value.type == "text/plain") {
+        incomingFiles = sharedFileUris(value)
+        if (incomingFiles.isEmpty() && value?.action == Intent.ACTION_SEND && value.type == "text/plain") {
             val text = value.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
             incomingLink = extractWebLink(text)
         }
@@ -84,7 +87,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         acceptShare(intent)
-        setContent { ColvyraApp(incomingLink) { incomingLink = null } }
+        setContent { ColvyraApp(incomingLink, { incomingLink = null }, incomingFiles) { incomingFiles = emptyList(); intent = Intent() } }
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -95,12 +98,13 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit) {
+private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit, incomingFiles: List<Uri>, consumeFiles: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("colvyra", Context.MODE_PRIVATE) }
     var themeMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
     val darkTheme = when (themeMode) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     var screen by remember { mutableStateOf(Screen.FILES) }
+    var showTransfers by remember { mutableStateOf(false) }
     val savedRoot = remember { prefs.getString("rootUri", null) }
     val firstFolder = remember(savedRoot) {
         savedRoot?.let { runCatching { DocumentFile.fromTreeUri(context, Uri.parse(it))?.uri }.getOrNull() }
@@ -150,6 +154,7 @@ private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit) {
         Scaffold(
             topBar = {
                 TopAppBar(title = { Text("COLVYRA") }, actions = {
+                    IconButton(onClick = { showTransfers = true }) { Icon(androidx.compose.material.icons.Icons.Outlined.Download, "Загрузки") }
                     IconButton(onClick = {
                         themeMode = when (themeMode) { "system" -> "light"; "light" -> "dark"; else -> "system" }
                         prefs.edit().putString("themeMode", themeMode).apply()
@@ -244,6 +249,8 @@ private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit) {
                 }
             }
         }
+        if (showTransfers) TransferCenter { showTransfers = false }
+        if (incomingFiles.isNotEmpty()) SharedImportDialog(library, incomingFiles, consumeFiles)
         pendingReference?.let { reference ->
             AddReferenceDialog(library, reference) { pendingReference = null }
         }

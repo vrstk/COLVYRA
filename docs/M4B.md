@@ -1,0 +1,5 @@
+# M4B
+
+Download center: WorkManager persisted jobs, network constraint, up to two retries for network/5xx failures before final write. Direct HTTPS only, no redirect following; WebView cookies read at execution and restricted to requested URL. Cloud account resolved at execution, no password in work data. Source URLs and names are local work metadata. Destination must support persisted write grant. Cache temporary file is removed on exit; failed final writes may leave incomplete output. No byte resume, guaranteed long foreground transfer, or upload queue.
+
+Share import: SEND/SEND_MULTIPLE content URIs (up to 100), explicit confirmation and chosen/new collection, private copies via FileProvider. Original shared files untouched. App-private copies survive removal of a collection, but not uninstall. No automatic import or uploads. Failed individual imports reported as count. Test on device with small files, switching tabs, restarting, offline queue, cancel, shared image and document, and collection opening. Video thumbnails, swipe viewer, and permanent APK signing deferred.

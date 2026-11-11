@@ -184,6 +184,7 @@ private class Dav(private val account:Account) {
         val u=parent.newBuilder().addPathSegment(name).addPathSegment("").build()
         client.newCall(request(u).method("MKCOL",null).build()).execute().use{check(it)}
     }
+    fun downloadRequest(item:Remote):Request = request(item.url).get().build()
     fun download(context:Context,item:Remote,dest:Uri){
         client.newCall(request(item.url).get().build()).execute().use{r->
             check(r)
@@ -202,6 +203,14 @@ private class Dav(private val account:Account) {
         }
         client.newCall(request(target).header("If-None-Match","*").put(body).build()).execute().use{check(it)}
     }
+}
+internal fun cloudDownloadCall(context:Context,ref:LibraryReference):Call {
+    val id=Uri.parse(ref.uri).authority
+    val account=Vault(context).loadAll().firstOrNull{it.id==id} ?: error("Исходный аккаунт отключён")
+    val dav=Dav(account)
+    val item=dav.resolve(ref)
+    require(!item.folder){"Нельзя скачать папку как файл"}
+    return dav.client.newCall(dav.downloadRequest(item))
 }
 @OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable private fun CloudViewer(item:Remote,dav:Dav,loader:ImageLoader,dismiss:()->Unit){
@@ -325,9 +334,11 @@ private class Dav(private val account:Account) {
     BackHandler(enabled=stack.size>1&&!busy){dav?.let{load(it,stack.dropLast(1))}}
     val download=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")){uri->
         val item=pendingDownload;pendingDownload=null;val client=dav
-        if(uri!=null && item!=null && client!=null)work{
-            withContext(Dispatchers.IO){client.download(context,item,uri)}
-            Toast.makeText(context,"Файл скачан",Toast.LENGTH_SHORT).show()
+        if(uri!=null && item!=null && client!=null) {
+            try {
+                enqueueDownload(context,client.reference(item),uri,"Облако")
+                Toast.makeText(context,"Добавлено в загрузки",Toast.LENGTH_SHORT).show()
+            } catch(e:Exception){error=e.localizedMessage ?: "Не удалось добавить загрузку"}
         }
     }
     val upload=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
