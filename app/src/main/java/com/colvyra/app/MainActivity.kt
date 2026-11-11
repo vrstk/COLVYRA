@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -84,11 +85,12 @@ class MainActivity : ComponentActivity() {
 private fun ColvyraApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("colvyra", Context.MODE_PRIVATE) }
-    var darkTheme by remember { mutableStateOf(prefs.getBoolean("darkTheme", false)) }
+    var themeMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
+    val darkTheme = when (themeMode) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     var screen by remember { mutableStateOf(Screen.FILES) }
     val savedRoot = remember { prefs.getString("rootUri", null) }
     val firstFolder = remember(savedRoot) {
-        savedRoot?.let { runCatching { DocumentFile.fromTreeUri(context, Uri.parse(it)) }.getOrNull() }
+        savedRoot?.let { runCatching { DocumentFile.fromTreeUri(context, Uri.parse(it))?.uri }.getOrNull() }
     }
     var folders by remember { mutableStateOf(if (firstFolder == null) emptyList() else listOf(firstFolder)) }
     var revision by remember { mutableIntStateOf(0) }
@@ -106,7 +108,7 @@ private fun ColvyraApp() {
             } catch (_: SecurityException) {
                 Toast.makeText(context, "Постоянное разрешение не выдано", Toast.LENGTH_SHORT).show()
             }
-            val root = DocumentFile.fromTreeUri(context, uri)
+            val root = DocumentFile.fromTreeUri(context, uri)?.uri
             folders = if (root == null) emptyList() else listOf(root)
             prefs.edit().putString("rootUri", uri.toString()).apply()
             revision++
@@ -121,11 +123,11 @@ private fun ColvyraApp() {
             topBar = {
                 TopAppBar(title = { Text("COLVYRA") }, actions = {
                     IconButton(onClick = {
-                        darkTheme = !darkTheme
-                        prefs.edit().putBoolean("darkTheme", darkTheme).apply()
+                        themeMode = when (themeMode) { "system" -> "light"; "light" -> "dark"; else -> "system" }
+                        prefs.edit().putString("themeMode", themeMode).apply()
                     }) {
                         Icon(if (darkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                            contentDescription = "Переключить тему")
+                            contentDescription = "Тема: $themeMode. Нажмите для переключения")
                     }
                 })
             },
@@ -166,11 +168,12 @@ private fun ColvyraApp() {
                         if (folders.isEmpty()) {
                             Text("Выберите папку. COLVYRA получит доступ только к разрешённым файлам.")
                         } else {
-                            FileList(
+                            LocalBrowser(
                                 directory = folders.last(),
                                 mediaOnly = screen == Screen.GALLERY,
                                 revision = revision,
-                                openDirectory = { folders = folders + it }
+                                openDirectory = { folders = folders + it },
+                                refresh = { revision++ }
                             )
                         }
                     }
@@ -227,64 +230,6 @@ private fun ColvyraApp() {
                 },
                 dismissButton = { TextButton(onClick = { showNewCollection = false }) { Text("Отмена") } }
             )
-        }
-    }
-}
-
-private data class BrowserItem(
-    val document: DocumentFile, val name: String, val folder: Boolean,
-    val mime: String?, val bytes: Long
-)
-
-@Composable
-private fun FileList(directory: DocumentFile, mediaOnly: Boolean, revision: Int,
-                     openDirectory: (DocumentFile) -> Unit) {
-    val context = LocalContext.current
-    var error by remember(directory.uri, revision) { mutableStateOf<String?>(null) }
-    val entries by produceState(initialValue = emptyList<BrowserItem>(), directory.uri, mediaOnly, revision) {
-        value = withContext(Dispatchers.IO) {
-            try {
-                directory.listFiles().map { file ->
-                    BrowserItem(file, file.name ?: "Без названия", file.isDirectory, file.type, file.length())
-                }.filter { !mediaOnly || it.folder || it.mime?.startsWith("image/") == true ||
-                            it.mime?.startsWith("video/") == true }
-                    .sortedWith(compareBy<BrowserItem> { !it.folder }.thenBy { it.name.lowercase() })
-            } catch (e: Exception) {
-                error = e.localizedMessage ?: "Не удалось прочитать папку"
-                emptyList()
-            }
-        }
-    }
-    Text(directory.name ?: "Файлы", style = MaterialTheme.typography.titleMedium)
-    if (error != null) Text("Ошибка: $error")
-    if (entries.isEmpty() && error == null) Text("Папка пуста или подходящих файлов нет.")
-    LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-        items(entries, key = { it.document.uri.toString() }) { item ->
-            ListItem(
-                headlineContent = { Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                supportingContent = { Text(if (item.folder) "Папка" else "${item.bytes / 1024} КБ") },
-                leadingContent = {
-                    Icon(when {
-                        item.folder -> Icons.Outlined.Folder
-                        item.mime?.startsWith("image/") == true -> Icons.Outlined.Image
-                        item.mime?.startsWith("video/") == true -> Icons.Outlined.Movie
-                        else -> Icons.Outlined.InsertDriveFile
-                    }, contentDescription = null)
-                },
-                modifier = Modifier.clickable {
-                    if (item.folder) openDirectory(item.document)
-                    else try {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(item.document.uri, item.mime ?: "*/*")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(intent)
-                    } catch (_: Exception) {
-                        Toast.makeText(context, "Нет приложения для открытия файла", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
-            HorizontalDivider()
         }
     }
 }
