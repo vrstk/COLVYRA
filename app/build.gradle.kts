@@ -13,8 +13,8 @@ android {
         applicationId = "com.colvyra.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.5.1-m5b"
+        versionCode = 13
+        versionName = "0.5.2-m5c"
     }
 
     // Release signing is opt-in and never embeds credentials in the repository.
