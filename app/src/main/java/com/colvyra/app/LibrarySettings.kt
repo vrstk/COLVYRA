@@ -102,6 +102,8 @@ private suspend fun readBackup(context:Context,uri:Uri):Backup=withContext(Dispa
                 Button(onClick={export.launch("COLVYRA-library.json")},enabled=!busy){Text("Экспортировать каталог")}
                 OutlinedButton(onClick={import.launch(arrayOf("application/json","text/plain","application/octet-stream"))},enabled=!busy){Text("Импортировать каталог")}
                 Text("При восстановлении коллекции объединяются по ID. Ссылки могут потребовать повторного доступа.")
+                HorizontalDivider()
+                AppDiagnosticsPanel(dao)
                 if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
                 if(status.isNotBlank())Text(status)
             }
