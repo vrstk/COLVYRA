@@ -2,7 +2,7 @@
 
 Open-source Android file manager, gallery and virtual collections.
 
-## Current: M5C (development)
+## Current: M5D (development)
 
 - Local SAF browser, gallery, thumbnails and media viewer.
 - Room virtual collections, links, descriptions, tags and favorites.
@@ -13,7 +13,7 @@ Open-source Android file manager, gallery and virtual collections.
 
 ## Build
 
-Java 17, Gradle 8.13, Android SDK 36. Actions → latest successful Android CI → Artifacts → colvyra-m5c-debug-apk.
+Java 17, Gradle 8.13, Android SDK 36. Actions → latest successful Android CI → Artifacts → colvyra-m5d-debug-apk.
 
 ## Limits
 
@@ -30,3 +30,5 @@ M5A: shared bounded local thumbnail cache and opt-in, secret-backed signed relea
 M5B: JVM tests for gallery ordering and backup JSON integrity, stricter duplicate/orphan validation on metadata import, and unit tests as a required CI gate. See docs/M5B.md. Physical device tests still pending.
 
 M5C: Settings now displays installed version/build type, signing certificate SHA-256, Android storage permission summary and collection counts. Includes a local-only, privacy-limited copyable diagnostics report. See docs/M5C.md. No secrets are configured, and physical-device verification remains pending.
+
+M5D: local gallery and file manager now support image/video filters, persistent ascending/descending sort settings and file metadata details. See docs/M5D.md. Device testing remains pending.
