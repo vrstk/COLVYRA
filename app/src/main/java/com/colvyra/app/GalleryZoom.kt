@@ -28,7 +28,7 @@ internal fun constrainGalleryZoom(
     val dy = if (panY.isFinite()) panY else 0f
     return GalleryZoom(
         scale = scale,
-        offsetX = (previous.offsetX + dx).coerceIn(-maxX, maxX),
-        offsetY = (previous.offsetY + dy).coerceIn(-maxY, maxY)
+        offsetX = if (maxX <= 0f) 0f else (previous.offsetX + dx).coerceIn(-maxX, maxX),
+        offsetY = if (maxY <= 0f) 0f else (previous.offsetY + dy).coerceIn(-maxY, maxY)
     )
 }
