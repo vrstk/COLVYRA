@@ -49,7 +49,6 @@ internal data class Entry(val uri: Uri, val name: String, val mime: String, val 
 }
 private data class FolderData(val title: String, val entries: List<Entry>, val writable: Boolean)
 private data class Transfer(val entry: Entry, val move: Boolean)
-private enum class Order(val label: String) { NAME("Имя"), DATE("Дата"), SIZE("Размер") }
 
 private fun listFolder(context: Context, directory: Uri): FolderData {
     val cr = context.contentResolver
@@ -116,9 +115,23 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
     var busy by remember { mutableStateOf(false) }
     var query by remember(directory) { mutableStateOf("") }
     var grid by remember(mediaOnly) { mutableStateOf(prefs.getBoolean("grid_$mediaOnly", mediaOnly)) }
-    var order by remember { mutableStateOf(Order.NAME) }
+    var order by remember(mediaOnly) {
+        mutableStateOf(runCatching {
+            LocalSort.valueOf(prefs.getString("local_sort_$mediaOnly", LocalSort.NAME.name)!!)
+        }.getOrDefault(LocalSort.NAME))
+    }
+    var reverse by remember(mediaOnly) {
+        mutableStateOf(prefs.getBoolean("local_reverse_$mediaOnly", false))
+    }
+    var typeFilter by remember(mediaOnly) {
+        mutableStateOf(runCatching {
+            LocalTypeFilter.valueOf(prefs.getString("local_type_$mediaOnly", LocalTypeFilter.ALL.name)!!)
+        }.getOrDefault(LocalTypeFilter.ALL))
+    }
     var sortMenu by remember { mutableStateOf(false) }
+    var filterMenu by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Entry?>(null) }
+    var details by remember { mutableStateOf<Entry?>(null) }
     var viewer by remember { mutableStateOf<Entry?>(null) }
     var rename by remember { mutableStateOf<Entry?>(null) }
     var delete by remember { mutableStateOf<Entry?>(null) }
@@ -151,14 +164,20 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
         catch (e: CancellationException) { throw e }
         catch (e: Exception) { data = null; failure = e.localizedMessage ?: "Нет доступа к папке" }
     }
-    val visible = remember(data, mediaOnly, query, order) {
-        val comparator = when (order) {
-            Order.NAME -> compareBy<Entry> { it.name.lowercase() }
-            Order.DATE -> compareByDescending<Entry> { it.modified }.thenBy { it.name.lowercase() }
-            Order.SIZE -> compareByDescending<Entry> { it.size }.thenBy { it.name.lowercase() }
-        }
-        data?.entries.orEmpty().filter { (!mediaOnly || it.folder || it.media) && it.name.contains(query, true) }
-            .sortedWith(compareBy<Entry> { !it.folder }.then(comparator))
+    val visible = remember(data, mediaOnly, query, order, reverse, typeFilter) {
+        localVisibleEntries(
+            entries = data?.entries.orEmpty(),
+            query = query,
+            galleryOnly = mediaOnly,
+            typeFilter = typeFilter,
+            sort = order,
+            reverse = reverse,
+            name = { it.name },
+            mime = { it.mime },
+            folder = { it.folder },
+            modified = { it.modified },
+            size = { it.size }
+        )
     }
     fun open(e: Entry) {
         if (e.folder) openDirectory(e.uri)
@@ -171,9 +190,51 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
             prefs.edit().putBoolean("grid_$mediaOnly", grid).apply()
         }) { Icon(if (grid) Icons.Outlined.ViewList else Icons.Outlined.GridView, "Список или плитка") }
         Box {
+            IconButton(onClick = { filterMenu = true }) {
+                Icon(Icons.Outlined.FilterAlt, "Типы файлов")
+            }
+            DropdownMenu(expanded = filterMenu, onDismissRequest = { filterMenu = false }) {
+                LocalTypeFilter.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.label) },
+                        onClick = {
+                            typeFilter = option
+                            prefs.edit().putString("local_type_$mediaOnly", option.name).apply()
+                            filterMenu = false
+                        },
+                        trailingIcon = { if (typeFilter == option) Icon(Icons.Outlined.Check, null) }
+                    )
+                }
+            }
+        }
+        Box {
             IconButton(onClick = { sortMenu = true }) { Icon(Icons.Outlined.Sort, "Сортировка") }
             DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                Order.entries.forEach { o -> DropdownMenuItem(text = { Text(o.label) }, onClick = { order = o; sortMenu = false }) }
+                LocalSort.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.label) },
+                        onClick = {
+                            order = option
+                            prefs.edit().putString("local_sort_$mediaOnly", option.name).apply()
+                            sortMenu = false
+                        },
+                        trailingIcon = { if (order == option) Icon(Icons.Outlined.Check, null) }
+                    )
+                }
+                HorizontalDivider()
+                val direction = when (order) {
+                    LocalSort.NAME -> if (reverse) "Я → А" else "А → Я"
+                    LocalSort.DATE -> if (reverse) "Сначала старые" else "Сначала новые"
+                    LocalSort.SIZE -> if (reverse) "Сначала маленькие" else "Сначала большие"
+                }
+                DropdownMenuItem(
+                    text = { Text("Направление: $direction") },
+                    onClick = {
+                        reverse = !reverse
+                        prefs.edit().putBoolean("local_reverse_$mediaOnly", reverse).apply()
+                        sortMenu = false
+                    }
+                )
             }
         }
         if (data?.writable == true) IconButton(onClick = { newFolder = true }, enabled = !busy) {
@@ -216,6 +277,7 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
         AlertDialog(onDismissRequest = { selected = null }, title = { Text(e.name) }, text = {
             Column {
                 TextButton(onClick = { selected = null; open(e) }) { Text("Открыть") }
+                TextButton(onClick = { selected = null; details = e }) { Text("Информация") }
                 TextButton(onClick = { selected = null; addToCollection(LibraryReference(e.uri.toString(), e.name, e.mime)) }) { Text("Добавить в коллекцию") }
                 if (e.canRename) TextButton(onClick = { selected = null; rename = e }) { Text("Переименовать") }
                 if (!e.folder) {
@@ -225,6 +287,24 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
                 if (e.canDelete) TextButton(onClick = { selected = null; delete = e }) { Text("Удалить оригинал", color = MaterialTheme.colorScheme.error) }
             }
         }, confirmButton = { TextButton(onClick = { selected = null }) { Text("Закрыть") } })
+    }
+    details?.let { e ->
+        AlertDialog(
+            onDismissRequest = { details = null },
+            title = { Text("Информация о файле") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Название: ${e.name}")
+                    Text("Тип: ${if (e.folder) "Папка" else e.mime}")
+                    if (!e.folder) Text("Размер: ${formatBytes(e.size)}")
+                    Text("Изменён: ${if (e.modified > 0L) java.text.DateFormat
+                        .getDateTimeInstance().format(java.util.Date(e.modified)) else "Нет данных"}")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { details = null }) { Text("Закрыть") }
+            }
+        )
     }
     if (newFolder) NameDialog("Новая папка", "", { newFolder = false }) { name ->
         newFolder = false
