@@ -55,14 +55,15 @@ private suspend fun readBackup(context:Context,uri:Uri):Backup=withContext(Dispa
         val c=a.getJSONObject(i)
         CollectionRecord(c.getString("id"),c.getString("name"),c.optString("description"),c.optString("tags"),c.optBoolean("favorite"),if(c.isNull("coverUri"))null else c.optString("coverUri"))
     }
+    BackupIntegrity.validateCollections(records.map { it.id }, records.map { it.name })
     val ids=records.map{it.id}.toSet()
-    require(ids.size==records.size&&records.all{it.id.isNotBlank()&&it.name.isNotBlank()}){"Некорректные коллекции"}
     val entries=(0 until b.length()).map{i->
         val e=b.getJSONObject(i)
         val ref=e.getString("uri")
         require(e.getString("collectionId") in ids && (safeWebUrl(ref)!=null || isCloudReference(ref) || Uri.parse(ref).scheme=="content")){"Некорректная ссылка"}
         CollectionEntry(e.getString("collectionId"),ref,e.getString("name"),e.getString("mime"),e.optString("tags"),e.optBoolean("favorite"))
     }
+    BackupIntegrity.validateReferences(ids, entries.map { it.collectionId to it.uri })
     Backup(records,entries,j.optString("theme").takeIf{it in listOf("light","dark","system")})
 }
 @Composable internal fun LibrarySettings(dao:CollectionDao,theme:String,setTheme:(String)->Unit,dismiss:()->Unit){
