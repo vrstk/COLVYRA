@@ -272,7 +272,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
             dismissButton = { TextButton(onClick = { removeEntry = null }) { Text("Отмена") } })
     }
     viewer?.let { current ->
-        val media = visible.filter {
+        val media = entries.filter { it.collectionId == selected?.id && (it.name + " " + it.tags).contains(query, true) &&
             !isCloudReference(it.uri) && (it.mime.startsWith("image/") || it.mime.startsWith("video/")) &&
                 Uri.parse(it.uri).scheme == "content"
         }.map { Entry(Uri.parse(it.uri), it.name, it.mime, 0, 0, 0) }
