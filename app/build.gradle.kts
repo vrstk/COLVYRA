@@ -13,8 +13,8 @@ android {
         applicationId = "com.colvyra.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.0-m3a"
+        versionCode = 5
+        versionName = "0.3.1-m3b"
     }
 
     buildTypes { release { isMinifyEnabled = false } }
@@ -38,6 +38,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.7.2")
     ksp("androidx.room:room-compiler:2.7.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.media3:media3-exoplayer:1.6.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.6.1")
+    implementation("androidx.media3:media3-ui:1.6.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
     implementation("io.coil-kt:coil-video:2.7.0")

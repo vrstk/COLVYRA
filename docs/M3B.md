@@ -1,0 +1,3 @@
+# M3b
+
+User reported successful login and cloud folder browsing on Mail.ru Cloud (M3a). M3b adds authenticated image previews, streamed video via Media3, a cloud source selector in Files/Gallery, decoded paths, current-directory search, virtual cloud references and remote rename/delete. No media or account data are committed. One account is supported; video grid uses file-type icons, not extracted thumbnails. Test cloud read, image preview, video range streaming, cloud collection references, and only then rename/delete on disposable test files. Cloud cover thumbnails and persistent transfer queue are not implemented.

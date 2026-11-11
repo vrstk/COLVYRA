@@ -90,7 +90,7 @@ internal fun AddReferenceDialog(dao: CollectionDao, ref: LibraryReference, dismi
 }
 
 @Composable
-internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit) {
+internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, openCloud: (LibraryReference) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val collections by dao.observeCollections().collectAsState(initial = emptyList())
@@ -146,6 +146,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit) {
         if (uri != null) selectedId?.let { importUris(it, listOf(uri), true) }
     }
     fun open(e: CollectionEntry) {
+        if (isCloudReference(e.uri)) { openCloud(LibraryReference(e.uri,e.name,e.mime)); return }
         work {
             val uri = Uri.parse(e.uri)
             val available = withContext(Dispatchers.IO) {
@@ -183,7 +184,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit) {
                 Card(onClick = { selectedId = c.id }) {
                     Box(Modifier.fillMaxWidth().aspectRatio(1.4f), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.CollectionsBookmark, null, Modifier.size(48.dp))
-                        c.coverUri?.let { AsyncImage(model = Uri.parse(it), imageLoader = loader, contentDescription = c.name,
+                        c.coverUri?.takeUnless { isCloudReference(it) }?.let { AsyncImage(model = Uri.parse(it), imageLoader = loader, contentDescription = c.name,
                             modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
                     }
                     Column(Modifier.padding(10.dp)) {
@@ -221,7 +222,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit) {
                     leadingContent = {
                         Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                             Icon(if (e.mime == FOLDER) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile, null)
-                            if (e.mime.startsWith("image/") || e.mime.startsWith("video/"))
+                            if (!isCloudReference(e.uri) && (e.mime.startsWith("image/") || e.mime.startsWith("video/")))
                                 AsyncImage(model = Uri.parse(e.uri), imageLoader = loader, contentDescription = null,
                                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         }
@@ -249,7 +250,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit) {
                 TextButton(onClick = { chosen = null; open(e) }) { Text("Открыть") }
                 TextButton(onClick = { chosen = null; editEntry = e }) { Text("Теги") }
                 TextButton(onClick = { chosen = null; work { dao.updateEntry(e.copy(favorite = !e.favorite)) } }) { Text(if (e.favorite) "Убрать из избранного" else "В избранное") }
-                if (e.mime.startsWith("image/") || e.mime.startsWith("video/")) TextButton(onClick = {
+                if (!isCloudReference(e.uri) && (e.mime.startsWith("image/") || e.mime.startsWith("video/"))) TextButton(onClick = {
                     chosen = null; work { dao.find(e.collectionId)?.let { dao.update(it.copy(coverUri = e.uri)) } }
                 }) { Text("Сделать обложкой") }
                 TextButton(onClick = { chosen = null; removeEntry = e }) { Text("Убрать из коллекции") }

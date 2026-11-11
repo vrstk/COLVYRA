@@ -96,6 +96,8 @@ private fun ColvyraApp() {
     var revision by remember { mutableIntStateOf(0) }
     val library = remember { CollectionDatabase.get(context).collections() }
     var pendingReference by remember { mutableStateOf<LibraryReference?>(null) }
+    var cloudMode by remember { mutableStateOf(false) }
+    var openCloudReference by remember { mutableStateOf<LibraryReference?>(null) }
     androidx.compose.runtime.LaunchedEffect(library) {
         try {
             library.importLegacy(readCollections(prefs))
@@ -164,6 +166,16 @@ private fun ColvyraApp() {
             Column(Modifier.fillMaxSize().padding(inset).padding(horizontal = 12.dp)) {
                 when (screen) {
                     Screen.FILES, Screen.GALLERY -> {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (!cloudMode) Button(onClick = { cloudMode = false }) { Text("Устройство") }
+                            else TextButton(onClick = { cloudMode = false; openCloudReference = null }) { Text("Устройство") }
+                            if (cloudMode) Button(onClick = { cloudMode = true }) { Text("Облако") }
+                            else TextButton(onClick = { cloudMode = true }) { Text("Облако") }
+                        }
+                        if (cloudMode) {
+                            CloudScreen(mediaOnly = screen == Screen.GALLERY, initialReference = openCloudReference,
+                                addToCollection = { pendingReference = it }, onReferenceConsumed = { openCloudReference = null })
+                        } else {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { picker.launch(null) }) { Text("Выбрать папку") }
@@ -187,13 +199,16 @@ private fun ColvyraApp() {
                             )
                         }
                     }
+                    }
                     Screen.COLLECTIONS -> CollectionScreen(
                         dao = library,
                         openFolder = { uri ->
                             folders = listOf(uri)
+                            cloudMode = false
                             screen = Screen.FILES
                             revision++
-                        }
+                        },
+                        openCloud = { ref -> openCloudReference = ref; cloudMode = true; screen = Screen.FILES }
                     )
                     Screen.SOURCES -> {
                         Text("Источники", style = MaterialTheme.typography.titleLarge)
@@ -201,7 +216,7 @@ private fun ColvyraApp() {
                             supportingContent = { Text(if (folders.isEmpty()) "Выбрать папку" else "Подключена") },
                             leadingContent = { Icon(Icons.Outlined.Folder, null) },
                             modifier = Modifier.clickable { picker.launch(null) })
-                        CloudScreen()
+                        CloudScreen(manage = true, addToCollection = { pendingReference = it })
                     }
                     Screen.WEBSITES -> {
                         Text("Сайты", style = MaterialTheme.typography.titleLarge)
