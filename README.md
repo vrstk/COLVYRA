@@ -2,7 +2,7 @@
 
 Open-source Android file manager, gallery and virtual collections.
 
-## Current: M4D (development)
+## Current: M5A (development)
 
 - Local SAF browser, gallery, thumbnails and media viewer.
 - Room virtual collections, links, descriptions, tags and favorites.
@@ -13,7 +13,7 @@ Open-source Android file manager, gallery and virtual collections.
 
 ## Build
 
-Java 17, Gradle 8.13, Android SDK 36. Actions → latest successful Android CI → Artifacts → colvyra-m4d-debug-apk.
+Java 17, Gradle 8.13, Android SDK 36. Actions → latest successful Android CI → Artifacts → colvyra-m5a-debug-apk.
 
 ## Limits
 
@@ -24,3 +24,5 @@ See docs/PRODUCT_SPEC.md, docs/ROADMAP.md and docs/M4B.md. Apache-2.0.
 M4c: settings with three theme modes and metadata-only JSON library export/merge. Original media and credentials are never exported. Permanent APK signing and swipe gallery are future work.
 
 M4D: full-screen swipe navigation for local folder and collection media, next/previous controls, position counter and active-page video playback. See docs/M4D.md. Device regression testing remains pending.
+
+M5A: shared bounded local thumbnail cache and opt-in, secret-backed signed release workflow. The debug APK is not a reliable in-place upgrade across CI runners. Release signing requires user-supplied secrets; see docs/M5A.md. Physical-device regression tests still pending.
