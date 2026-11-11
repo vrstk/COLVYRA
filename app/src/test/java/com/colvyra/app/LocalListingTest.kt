@@ -61,6 +61,28 @@ class LocalListingTest {
             list(sort = LocalSort.SIZE, reverse = true))
     }
 
+    @Test fun handlesLargeMixedFolderWithoutLosingFilteredSortOrder() {
+        val bulk = (0 until 20_000).map { i ->
+            Item("photo_${i.toString().padStart(5, '0')}.jpg", "image/jpeg", size = i.toLong())
+        }
+        val result = localVisibleEntries(
+            entries = bulk,
+            query = "photo_199",
+            galleryOnly = true,
+            typeFilter = LocalTypeFilter.IMAGES,
+            sort = LocalSort.SIZE,
+            reverse = false,
+            name = { it.name },
+            mime = { it.mime },
+            folder = { it.folder },
+            modified = { it.date },
+            size = { it.size }
+        )
+        assertEquals(100, result.size)
+        assertEquals("photo_19999.jpg", result.first().name)
+        assertEquals("photo_19900.jpg", result.last().name)
+    }
+
     @Test fun caseInsensitiveSearchTrimsSurroundingSpaces() {
         assertEquals(listOf("Trip.jpg"), list(query = " TRIP "))
         assertEquals(emptyList<String>(), list(query = "nothing"))
