@@ -271,7 +271,13 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
             confirmButton = { TextButton(onClick = { removeEntry = null; work { dao.removeReference(e.collectionId, e.uri) } }) { Text("Убрать") } },
             dismissButton = { TextButton(onClick = { removeEntry = null }) { Text("Отмена") } })
     }
-    viewer?.let { MediaViewer(it, loader) { viewer = null } }
+    viewer?.let { current ->
+        val media = visible.filter {
+            !isCloudReference(it.uri) && (it.mime.startsWith("image/") || it.mime.startsWith("video/")) &&
+                Uri.parse(it.uri).scheme == "content"
+        }.map { Entry(Uri.parse(it.uri), it.name, it.mime, 0, 0, 0) }
+        GalleryPager(current, media, loader) { viewer = null }
+    }
 }
 
 @Composable
