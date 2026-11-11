@@ -41,7 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private data class Entry(val uri: Uri, val name: String, val mime: String, val size: Long, val modified: Long, val flags: Int) {
+internal data class Entry(val uri: Uri, val name: String, val mime: String, val size: Long, val modified: Long, val flags: Int) {
     val folder get() = mime == DocumentsContract.Document.MIME_TYPE_DIR
     val media get() = mime.startsWith("image/") || mime.startsWith("video/")
     val canRename get() = flags and DocumentsContract.Document.FLAG_SUPPORTS_RENAME != 0
@@ -107,7 +107,7 @@ private fun transferFile(context: Context, t: Transfer, dest: Uri): String {
 }
 
 @Composable
-internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, openDirectory: (Uri) -> Unit, refresh: () -> Unit) {
+internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, openDirectory: (Uri) -> Unit, refresh: () -> Unit, addToCollection: (LibraryReference) -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("colvyra", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
@@ -222,6 +222,7 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
         AlertDialog(onDismissRequest = { selected = null }, title = { Text(e.name) }, text = {
             Column {
                 TextButton(onClick = { selected = null; open(e) }) { Text("Открыть") }
+                TextButton(onClick = { selected = null; addToCollection(LibraryReference(e.uri.toString(), e.name, e.mime)) }) { Text("Добавить в коллекцию") }
                 if (e.canRename) TextButton(onClick = { selected = null; rename = e }) { Text("Переименовать") }
                 if (!e.folder) {
                     TextButton(onClick = { selected = null; transfer = Transfer(e, false); destination.launch(null) }) { Text("Копировать в папку") }
@@ -271,7 +272,7 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
         confirmButton = { TextButton(onClick = { submit(name.trim()) }, enabled = valid) { Text("Сохранить") } },
         dismissButton = { TextButton(onClick = dismiss) { Text("Отмена") } })
 }
-@Composable private fun MediaViewer(e: Entry, loader: ImageLoader, dismiss: () -> Unit) {
+@Composable internal fun MediaViewer(e: Entry, loader: ImageLoader, dismiss: () -> Unit) {
     val context = LocalContext.current
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {

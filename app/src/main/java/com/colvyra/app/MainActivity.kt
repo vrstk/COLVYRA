@@ -94,9 +94,18 @@ private fun ColvyraApp() {
     }
     var folders by remember { mutableStateOf(if (firstFolder == null) emptyList() else listOf(firstFolder)) }
     var revision by remember { mutableIntStateOf(0) }
-    var collections by remember { mutableStateOf(readCollections(prefs)) }
-    var newCollection by remember { mutableStateOf("") }
-    var showNewCollection by remember { mutableStateOf(false) }
+    val library = remember { CollectionDatabase.get(context).collections() }
+    var pendingReference by remember { mutableStateOf<LibraryReference?>(null) }
+    androidx.compose.runtime.LaunchedEffect(library) {
+        try {
+            library.importLegacy(readCollections(prefs))
+            prefs.edit().remove("collections").apply()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Toast.makeText(context, "Не удалось перенести старые коллекции", Toast.LENGTH_LONG).show()
+        }
+    }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -173,22 +182,19 @@ private fun ColvyraApp() {
                                 mediaOnly = screen == Screen.GALLERY,
                                 revision = revision,
                                 openDirectory = { folders = folders + it },
-                                refresh = { revision++ }
+                                refresh = { revision++ },
+                                addToCollection = { pendingReference = it }
                             )
                         }
                     }
-                    Screen.COLLECTIONS -> {
-                        Text("Мои коллекции", style = MaterialTheme.typography.titleLarge)
-                        Text("Пока сохраняются только названия. Привязка файлов появится в M2.")
-                        Button(onClick = { showNewCollection = true }) {
-                            Icon(Icons.Outlined.Add, contentDescription = null)
-                            Text("Новая коллекция")
+                    Screen.COLLECTIONS -> CollectionScreen(
+                        dao = library,
+                        openFolder = { uri ->
+                            folders = listOf(uri)
+                            screen = Screen.FILES
+                            revision++
                         }
-                        collections.forEach { name ->
-                            ListItem(headlineContent = { Text(name) },
-                                leadingContent = { Icon(Icons.Outlined.CollectionsBookmark, null) })
-                        }
-                    }
+                    )
                     Screen.SOURCES -> {
                         Text("Источники", style = MaterialTheme.typography.titleLarge)
                         ListItem(headlineContent = { Text("Память Android") },
@@ -211,25 +217,8 @@ private fun ColvyraApp() {
                 }
             }
         }
-        if (showNewCollection) {
-            AlertDialog(
-                onDismissRequest = { showNewCollection = false },
-                title = { Text("Новая коллекция") },
-                text = { OutlinedTextField(value = newCollection, onValueChange = { newCollection = it },
-                    label = { Text("Название") }, singleLine = true) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val name = newCollection.trim()
-                        if (name.isNotEmpty() && name !in collections) {
-                            collections = collections + name
-                            writeCollections(prefs, collections)
-                        }
-                        newCollection = ""
-                        showNewCollection = false
-                    }) { Text("Создать") }
-                },
-                dismissButton = { TextButton(onClick = { showNewCollection = false }) { Text("Отмена") } }
-            )
+        pendingReference?.let { reference ->
+            AddReferenceDialog(library, reference) { pendingReference = null }
         }
     }
 }
@@ -241,9 +230,3 @@ private fun readCollections(prefs: SharedPreferences): List<String> =
     } catch (_: Exception) {
         emptyList()
     }
-
-private fun writeCollections(prefs: SharedPreferences, names: List<String>) {
-    val arr = JSONArray()
-    names.forEach(arr::put)
-    prefs.edit().putString("collections", arr.toString()).apply()
-}
