@@ -35,8 +35,7 @@ import kotlinx.coroutines.launch
 internal fun GalleryPager(initial: Entry, candidates: List<Entry>, loader: ImageLoader, dismiss: () -> Unit) {
     val context = LocalContext.current
     val items = remember(initial.uri, candidates) {
-        val unique = candidates.filter { it.media }.distinctBy { it.uri.toString() }
-        if (unique.any { it.uri == initial.uri }) unique else listOf(initial) + unique
+        orderedGalleryItems(initial, candidates, { it.media }, { it.uri.toString() })
     }
 
     key(initial.uri) {
