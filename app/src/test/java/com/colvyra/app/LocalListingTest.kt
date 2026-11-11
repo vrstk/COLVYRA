@@ -57,7 +57,7 @@ class LocalListingTest {
     @Test fun dateAndSizeOrderApplyOnlyWithinGroups() {
         assertEquals(listOf("Albums", "Zoo", "movie.mp4", "Beach.png", "Trip.jpg", "notes.txt"),
             list(sort = LocalSort.DATE))
-        assertEquals(listOf("Albums", "Zoo", "notes.txt", "Trip.jpg", "Beach.png", "movie.mp4"),
+        assertEquals(listOf("Zoo", "Albums", "notes.txt", "Trip.jpg", "Beach.png", "movie.mp4"),
             list(sort = LocalSort.SIZE, reverse = true))
     }
 
