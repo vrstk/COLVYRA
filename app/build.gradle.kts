@@ -13,8 +13,8 @@ android {
         applicationId = "com.colvyra.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.5.0-m5a"
+        versionCode = 12
+        versionName = "0.5.1-m5b"
     }
 
     // Release signing is opt-in and never embeds credentials in the repository.
@@ -54,6 +54,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation(platform("androidx.compose:compose-bom:2025.08.00"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.ui:ui")
