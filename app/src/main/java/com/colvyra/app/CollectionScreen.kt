@@ -90,7 +90,7 @@ internal fun AddReferenceDialog(dao: CollectionDao, ref: LibraryReference, dismi
 }
 
 @Composable
-internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, openCloud: (LibraryReference) -> Unit) {
+internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, openCloud: (LibraryReference) -> Unit, openWeb: (String) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val collections by dao.observeCollections().collectAsState(initial = emptyList())
@@ -146,6 +146,7 @@ internal fun CollectionScreen(dao: CollectionDao, openFolder: (Uri) -> Unit, ope
         if (uri != null) selectedId?.let { importUris(it, listOf(uri), true) }
     }
     fun open(e: CollectionEntry) {
+        if (e.mime == "text/uri-list" && safeWebUrl(e.uri) != null) { openWeb(e.uri); return }
         if (isCloudReference(e.uri)) { openCloud(LibraryReference(e.uri,e.name,e.mime)); return }
         work {
             val uri = Uri.parse(e.uri)

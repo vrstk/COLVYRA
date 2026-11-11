@@ -74,15 +74,28 @@ private enum class Screen(val title: String) {
 }
 
 class MainActivity : ComponentActivity() {
+    private var incomingLink by mutableStateOf<String?>(null)
+    private fun acceptShare(value: Intent?) {
+        if (value?.action == Intent.ACTION_SEND && value.type == "text/plain") {
+            val text = value.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+            incomingLink = extractWebLink(text)
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ColvyraApp() }
+        acceptShare(intent)
+        setContent { ColvyraApp(incomingLink) { incomingLink = null } }
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptShare(intent)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColvyraApp() {
+private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("colvyra", Context.MODE_PRIVATE) }
     var themeMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
@@ -98,6 +111,10 @@ private fun ColvyraApp() {
     var pendingReference by remember { mutableStateOf<LibraryReference?>(null) }
     var cloudMode by remember { mutableStateOf(false) }
     var openCloudReference by remember { mutableStateOf<LibraryReference?>(null) }
+    var webTarget by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(incomingLink) {
+        incomingLink?.let { webTarget = it; screen = Screen.WEBSITES; consumeLink() }
+    }
     androidx.compose.runtime.LaunchedEffect(library) {
         try {
             library.importLegacy(readCollections(prefs))
@@ -208,7 +225,8 @@ private fun ColvyraApp() {
                             screen = Screen.FILES
                             revision++
                         },
-                        openCloud = { ref -> openCloudReference = ref; cloudMode = true; screen = Screen.FILES }
+                        openCloud = { ref -> openCloudReference = ref; cloudMode = true; screen = Screen.FILES },
+                        openWeb = { url -> webTarget = url; screen = Screen.WEBSITES }
                     )
                     Screen.SOURCES -> {
                         Text("Источники", style = MaterialTheme.typography.titleLarge)
@@ -218,17 +236,11 @@ private fun ColvyraApp() {
                             modifier = Modifier.clickable { picker.launch(null) })
                         CloudScreen(manage = true, addToCollection = { pendingReference = it })
                     }
-                    Screen.WEBSITES -> {
-                        Text("Сайты", style = MaterialTheme.typography.titleLarge)
-                        Text("Встроенный браузер появится в M4. Сейчас откроется внешний браузер.")
-                        Button(onClick = {
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")))
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "Не найден браузер", Toast.LENGTH_SHORT).show()
-                            }
-                        }) { Text("Открыть браузер") }
-                    }
+                    Screen.WEBSITES -> WebScreen(
+                        initialUrl = webTarget,
+                        consumeUrl = { webTarget = null },
+                        addToCollection = { pendingReference = it }
+                    )
                 }
             }
         }

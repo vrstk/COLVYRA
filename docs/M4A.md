@@ -1,0 +1,3 @@
+# M4A
+
+HTTPS browser with WebView, bookmarks/categories, local history (100 items), explicit download to a user-chosen Android document, incoming/outgoing text link sharing and collection references. Shortcuts are websites, not native integrations. WebView does not use cloud credentials; no file/content URL access, mixed content, JS bridge, or automatic SSL bypass. Direct downloads use scoped WebView cookies and reject redirects; some sites, protected streams, blob URLs, and native login flows will not work. A failed download may leave an incomplete output file. Test with a public HTTPS page and direct image/file, a shared URL, bookmarks after restart, and a link in a collection.
