@@ -253,7 +253,7 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
             work { if (!DocumentsContract.deleteDocument(context.contentResolver, e.uri)) error("Удаление не выполнено"); "Удалено" }
         }) { Text("Удалить", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { delete = null }) { Text("Отмена") } }) }
-    viewer?.let { e -> MediaViewer(e, loader, { viewer = null }) }
+    viewer?.let { e -> GalleryPager(e, visible.filter { it.media }, loader) { viewer = null } }
 }
 
 @Composable private fun EntryPreview(e: Entry, loader: ImageLoader, modifier: Modifier) {
@@ -271,28 +271,6 @@ internal fun LocalBrowser(directory: Uri, mediaOnly: Boolean, revision: Int, ope
         text = { OutlinedTextField(name, { name = it }, label = { Text("Название") }, singleLine = true) },
         confirmButton = { TextButton(onClick = { submit(name.trim()) }, enabled = valid) { Text("Сохранить") } },
         dismissButton = { TextButton(onClick = dismiss) { Text("Отмена") } })
-}
-@Composable internal fun MediaViewer(e: Entry, loader: ImageLoader, dismiss: () -> Unit) {
-    val context = LocalContext.current
-    Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.fillMaxSize().padding(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(e.name, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    TextButton(onClick = { externalOpen(context, e) }) { Text("Открыть в…") }
-                    IconButton(onClick = dismiss) { Icon(Icons.Outlined.Close, "Закрыть") }
-                }
-                if (e.mime.startsWith("video/")) {
-                    AndroidView(factory = { ctx -> VideoView(ctx).apply {
-                        val controller = MediaController(ctx); controller.setAnchorView(this); setMediaController(controller)
-                        setVideoURI(e.uri); setOnPreparedListener { start() }
-                        setOnErrorListener { _, _, _ -> Toast.makeText(ctx, "Не удалось воспроизвести видео", Toast.LENGTH_LONG).show(); true }
-                    } }, modifier = Modifier.weight(1f).fillMaxWidth(), onRelease = { it.stopPlayback() })
-                } else AsyncImage(model = e.uri, imageLoader = loader, contentDescription = e.name,
-                    modifier = Modifier.weight(1f).fillMaxWidth(), contentScale = ContentScale.Fit)
-            }
-        }
-    }
 }
 private fun formatBytes(n: Long): String = when {
     n < 1024 -> "$n Б"
