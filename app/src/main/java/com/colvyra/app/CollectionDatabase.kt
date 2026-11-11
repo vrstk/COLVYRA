@@ -36,6 +36,12 @@ abstract class CollectionDao {
     abstract fun observeCollections(): Flow<List<CollectionRecord>>
     @Query("SELECT * FROM collection_entries ORDER BY favorite DESC, name COLLATE NOCASE")
     abstract fun observeEntries(): Flow<List<CollectionEntry>>
+    @Query("SELECT * FROM collections")
+    abstract suspend fun allCollections(): List<CollectionRecord>
+    @Query("SELECT * FROM collection_entries")
+    abstract suspend fun allEntries(): List<CollectionEntry>
+    @Transaction open suspend fun snapshot(): Pair<List<CollectionRecord>,List<CollectionEntry>> = allCollections() to allEntries()
+    @Transaction open suspend fun restore(records:List<CollectionRecord>,entries:List<CollectionEntry>){ records.forEach{insert(it)};entries.forEach{insertEntry(it)} }
     @Query("SELECT * FROM collections WHERE id = :id")
     abstract suspend fun find(id: String): CollectionRecord?
     @Insert(onConflict = OnConflictStrategy.IGNORE)

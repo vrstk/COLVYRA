@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.DarkMode
@@ -105,6 +106,7 @@ private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit, incomingF
     val darkTheme = when (themeMode) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     var screen by remember { mutableStateOf(Screen.FILES) }
     var showTransfers by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     val savedRoot = remember { prefs.getString("rootUri", null) }
     val firstFolder = remember(savedRoot) {
         savedRoot?.let { runCatching { DocumentFile.fromTreeUri(context, Uri.parse(it))?.uri }.getOrNull() }
@@ -154,6 +156,7 @@ private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit, incomingF
         Scaffold(
             topBar = {
                 TopAppBar(title = { Text("COLVYRA") }, actions = {
+                    IconButton(onClick = { showSettings = true }) { Icon(Icons.Outlined.Settings, "Настройки") }
                     IconButton(onClick = { showTransfers = true }) { Icon(androidx.compose.material.icons.Icons.Outlined.Download, "Загрузки") }
                     IconButton(onClick = {
                         themeMode = when (themeMode) { "system" -> "light"; "light" -> "dark"; else -> "system" }
@@ -249,6 +252,7 @@ private fun ColvyraApp(incomingLink: String?, consumeLink: () -> Unit, incomingF
                 }
             }
         }
+        if (showSettings) LibrarySettings(library, themeMode, { mode -> themeMode = mode; prefs.edit().putString("themeMode", mode).apply() }) { showSettings = false }
         if (showTransfers) TransferCenter { showTransfers = false }
         if (incomingFiles.isNotEmpty()) SharedImportDialog(library, incomingFiles, consumeFiles)
         pendingReference?.let { reference ->

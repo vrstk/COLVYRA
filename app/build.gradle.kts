@@ -13,8 +13,8 @@ android {
         applicationId = "com.colvyra.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.4.1-m4b"
+        versionCode = 9
+        versionName = "0.4.2-m4c"
     }
 
     buildTypes { release { isMinifyEnabled = false } }
